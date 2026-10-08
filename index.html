@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>BEEZALY CERAMICS</title>
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg: #ece5d8;           /* Теплый овсяный фон со скрина */
+      --header-bg: #596157;    /* Приглушенный оливково-графитовый */
+      --header-text: #ffffff;
+      --text-dark: #242422;    /* Мягкий черный для текста */
+      --text-muted: #7a7a74;   /* Серый для описания материалов */
+      --modal-bg: #f8f6f0;     /* Цвет подложки всплывающей шторки */
+      --sold-badge: #4a4a46;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text-dark);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      padding-bottom: 40px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Верхняя плашка как на сайте */
+    header {
+      background-color: var(--header-bg);
+      color: var(--header-text);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    }
+    .logo-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      line-height: 1.1;
+    }
+    .logo-main {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .logo-sub {
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      opacity: 0.85;
+    }
+    .header-tag {
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      opacity: 0.9;
+    }
+
+    /* Сетка витрины */
+    .container {
+      padding: 16px 12px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px 10px;
+    }
+
+    .card {
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+      position: relative;
+    }
+    .card:active {
+      opacity: 0.85;
+    }
+
+    .card-img-wrap {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #ded7c9;
+      position: relative;
+      margin-bottom: 8px;
+    }
+    .card-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* Бейджи поверх фото */
+    .badge-new {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: rgba(89, 97, 87, 0.85);
+      backdrop-filter: blur(4px);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 3px 6px;
+      border-radius: 6px;
+    }
+    .badge-sold {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: rgba(40, 40, 38, 0.9);
+      backdrop-filter: blur(4px);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 3px 6px;
+      border-radius: 6px;
+    }
+
+    /* Текстовый блок под фото строго по центру */
+    .card-info {
+      text-align: center;
+      padding: 0 4px;
+    }
+    .card-title {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      margin-bottom: 3px;
+      line-height: 1.25;
+      color: var(--text-dark);
+    }
+    .card-material {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      line-height: 1.2;
+    }
+    .card-price {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-dark);
+    }
+
+    .card.sold img {
+      filter: grayscale(35%) opacity(0.75);
+    }
+    .card.sold .card-price {
+      color: var(--text-muted);
+    }
+
+    /* Модальное окно (шторка с деталями) */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(30, 32, 30, 0.6);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: flex-end;
+      z-index: 1000;
+    }
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-sheet {
+      background: var(--modal-bg);
+      width: 100%;
+      max-height: 88vh;
+      border-radius: 20px 20px 0 0;
+      padding: 20px 18px 28px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      animation: slideUp 0.22s ease-out;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    .modal-gallery {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      margin-bottom: 16px;
+      padding-bottom: 4px;
+    }
+    .modal-gallery::-webkit-scrollbar { display: none; }
+    .modal-gallery img {
+      width: 84%;
+      flex-shrink: 0;
+      aspect-ratio: 1 / 1;
+      border-radius: 14px;
+      object-fit: cover;
+      scroll-snap-align: center;
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+      text-align: center;
+    }
+    .modal-material {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .modal-price {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-dark);
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .modal-desc {
+      font-size: 13px;
+      line-height: 1.5;
+      color: #40403d;
+      margin-bottom: 12px;
+    }
+    .modal-params {
+      font-size: 12px;
+      color: var(--text-muted);
+      background: #eae3d4;
+      padding: 10px 14px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+
+    .btn-buy {
+      background: var(--header-bg);
+      color: #fff;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      padding: 14px;
+      border-radius: 12px;
+      text-align: center;
+      display: block;
+      cursor: pointer;
+    }
+    .btn-buy:active { opacity: 0.9; }
+    .btn-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 13px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      text-align: center;
+      padding: 14px 0 0;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Шапка как на образце -->
+  <header>
+    <div class="logo-wrap">
+      <span class="logo-main">Beezaly</span>
+      <span class="logo-sub">Ceramics</span>
+    </div>
+    <span class="header-tag">Каталог</span>
+  </header>
+
+  <div class="container">
+    <div class="grid" id="products-grid"></div>
+  </div>
+
+  <!-- Всплывающая карточка -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal-sheet">
+      <div class="modal-gallery" id="modal-gallery"></div>
+      <h2 class="modal-title" id="modal-title"></h2>
+      <div class="modal-material" id="modal-material"></div>
+      <div class="modal-price" id="modal-price"></div>
+      <div class="modal-desc" id="modal-desc"></div>
+      <div class="modal-params" id="modal-params"></div>
+      <a class="btn-buy" id="modal-buy-btn" href="#">Забрать в @beezaly_order</a>
+      <button class="btn-close" onclick="closeModal()">Закрыть</button>
+    </div>
+  </div>
+
+  <script>
+    // -------------------------------------------------------------
+    // СПИСОК ТОВАРОВ: РЕДАКТИРУЙ ДАННЫЕ ЗДЕСЬ
+    // -------------------------------------------------------------
+    const products = [
+      {
+        id: 1,
+        title: "Кружка Montes",
+        material: "Каменные массы, прозрачная глазурь",
+        price: "4 990 р.",
+        status: "available", // "available" (в наличии) или "sold" (продано)
+        isNew: true,         // true покажет значок NEW
+        photos: ["images/piala_1.jpg", "images/piala_2.jpg", "images/piala_3.jpg"],
+        desc: "Слоистая фактурная глина, сколы ручной работы. Внутри глянцевая глазурь под горячие и холодные напитки.",
+        params: "• Объем: ~350 мл<br>• Доставка: СДЭК / Яндекс / Ozon"
+      },
+      {
+        id: 2,
+        title: "Кружка Basic",
+        material: "Каменная масса, глазурь",
+        price: "2 490 р.",
+        status: "available",
+        isNew: true,
+        photos: ["images/bowl_1.jpg"],
+        desc: "Базовая форма с приятным тактильным рельефом. Отлично ложится в руку.",
+        params: "• Объем: ~300 мл<br>• Доставка: СДЭК / Яндекс / Ozon"
+      }
+    ];
+
+    // Инициализация Telegram WebApp
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      // Окрашиваем верхний статус-бар Telegram под цвет шапки
+      if (tg.setHeaderColor) tg.setHeaderColor('#596157');
+      if (tg.setBackgroundColor) tg.setBackgroundColor('#ece5d8');
+    }
+
+    // Отрисовка товаров
+    const grid = document.getElementById('products-grid');
+    products.forEach(p => {
+      const isSold = p.status === 'sold';
+      const card = document.createElement('div');
+      card.className = `card ${isSold ? 'sold' : ''}`;
+      
+      let badgeHtml = '';
+      if (isSold) {
+        badgeHtml = '<span class="badge-sold">Продано</span>';
+      } else if (p.isNew) {
+        badgeHtml = '<span class="badge-new">NEW</span>';
+      }
+
+      card.innerHTML = `
+        <div class="card-img-wrap">
+          <img src="${p.photos[0]}" alt="${p.title}" loading="lazy">
+          ${badgeHtml}
+        </div>
+        <div class="card-info">
+          <div class="card-title">${p.title}</div>
+          <div class="card-material">${p.material || ''}</div>
+          <div class="card-price">${isSold ? 'Продано' : p.price}</div>
+        </div>
+      `;
+      card.onclick = () => openModal(p);
+      grid.appendChild(card);
+    });
+
+    // Открытие модалки
+    function openModal(item) {
+      const modal = document.getElementById('modal');
+      const gallery = document.getElementById('modal-gallery');
+      gallery.innerHTML = item.photos.map(src => `<img src="${src}" alt="">`).join('');
+
+      document.getElementById('modal-title').textContent = item.title;
+      document.getElementById('modal-material').textContent = item.material || '';
+      document.getElementById('modal-price').textContent = item.status === 'sold' ? 'Продано' : item.price;
+      document.getElementById('modal-desc').textContent = item.desc;
+      document.getElementById('modal-params').innerHTML = item.params;
+
+      const buyBtn = document.getElementById('modal-buy-btn');
+      if (item.status === 'sold') {
+        buyBtn.style.display = 'none';
+      } else {
+        buyBtn.style.display = 'block';
+        const orderUrl = `https://t.me/beezaly_order?text=${encodeURIComponent('Привет! Хочу забрать: ' + item.title)}`;
+        buyBtn.onclick = (e) => {
+          e.preventDefault();
+          if (tg && tg.openTelegramLink) {
+            tg.openTelegramLink(orderUrl);
+          } else {
+            window.location.href = orderUrl;
+          }
+        };
+      }
+
+      modal.classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.remove('active');
+    }
+
+    document.getElementById('modal').onclick = (e) => {
+      if (e.target.id === 'modal') closeModal();
+    };
+  </script>
+</body>
+</html>
